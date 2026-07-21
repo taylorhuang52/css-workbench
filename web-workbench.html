@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>網頁開發工作台｜HTML + CSS 練習場</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+
+<style>
+:root{
+  --bg:#14152b;
+  --surface:#1b1d3a;
+  --surface-2:#232650;
+  --border:#33366a;
+  --text:#eae8f5;
+  --text-muted:#9491b8;
+  --accent:#7c9eff;
+  --accent-dim:#5b74c4;
+  --accent-warm:#ffb86b;
+  --mono:'JetBrains Mono',monospace;
+  --display:'Space Grotesk',sans-serif;
+  --body:'Inter',sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);overflow:hidden;}
+
+/* ---------- Header ---------- */
+.app{display:grid;grid-template-rows:auto 1fr;height:100vh;}
+header{
+  display:flex;align-items:center;gap:16px;padding:14px 22px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,#191a35,#14152b);
+}
+.cascade-mark{position:relative;width:34px;height:28px;flex-shrink:0;}
+.cascade-mark span{position:absolute;border-radius:3px;opacity:0;animation:pop .5s ease forwards;}
+.cascade-mark span:nth-child(1){left:0;top:0;width:14px;height:28px;background:var(--accent);animation-delay:.05s;}
+.cascade-mark span:nth-child(2){left:16px;top:0;width:18px;height:12px;background:var(--accent-dim);animation-delay:.2s;}
+.cascade-mark span:nth-child(3){left:16px;top:16px;width:18px;height:12px;background:var(--accent-warm);animation-delay:.35s;}
+@keyframes pop{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+.brand{display:flex;flex-direction:column;line-height:1.15;}
+.brand b{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:.2px;}
+.brand small{color:var(--text-muted);font-size:12.5px;}
+
+.mode-switch{display:flex;gap:4px;margin-left:10px;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:3px;}
+.mode-switch button{
+  font-family:var(--mono);font-size:12px;letter-spacing:.3px;
+  background:transparent;border:none;color:var(--text-muted);
+  padding:6px 16px;border-radius:18px;cursor:pointer;transition:all .15s;
+}
+.mode-switch button:hover{color:var(--text);}
+.mode-switch button.active{background:var(--accent);color:#101127;font-weight:700;}
+
+.header-spacer{flex:1;}
+.width-control{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;color:var(--text-muted);}
+.width-control input[type=range]{accent-color:var(--accent);width:120px;}
+.width-control b{color:var(--accent);font-weight:500;}
+
+/* ---------- Layout ---------- */
+.layout{display:grid;grid-template-columns:230px 1fr 1fr;min-height:0;}
+@media (max-width:1050px){
+  .layout{grid-template-columns:200px 1fr;}
+  .preview-col{grid-column:1/3;grid-row:2;border-top:1px solid var(--border);}
+}
+@media (max-width:720px){
+  body{overflow:auto;}
+  .app{height:auto;min-height:100vh;}
+  .layout{grid-template-columns:1fr;}
+  .sidebar{grid-row:1;display:flex;overflow-x:auto;padding:10px;gap:8px;}
+  .sidebar .lesson-btn{white-space:nowrap;}
+  .editor-col{grid-row:2;}
+  .preview-col{grid-column:1;grid-row:3;}
+  .CodeMirror{height:260px !important;}
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar{border-right:1px solid var(--border);padding:14px 10px;overflow-y:auto;background:var(--surface);}
+.sidebar-title{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);padding:4px 8px 10px;}
+.lesson-btn{
+  display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;
+  color:var(--text-muted);padding:9px 10px;border-radius:8px;font-family:var(--body);font-size:13.5px;
+  cursor:pointer;margin-bottom:2px;transition:background .15s,color .15s,border-color .15s;
+}
+.lesson-btn .num{font-family:var(--mono);color:var(--accent-dim);margin-right:8px;font-size:12px;}
+.lesson-btn:hover{background:var(--surface-2);color:var(--text);}
+.lesson-btn.active{background:var(--surface-2);border-color:var(--border);color:var(--text);font-weight:600;}
+.lesson-btn.active .num{color:var(--accent);}
+
+/* ---------- Editor column ---------- */
+.editor-col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);}
+.editor-pane{flex:1;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--border);}
+.editor-pane:last-child{border-bottom:none;}
+.pane-label{
+  display:flex;align-items:center;justify-content:space-between;padding:7px 12px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.6px;color:var(--text-muted);
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+.pane-label .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;}
+.dot-html{background:var(--accent-warm);}
+.dot-css{background:var(--accent);}
+.reset-btn{
+  background:none;border:1px solid var(--border);color:var(--text-muted);
+  font-family:var(--mono);font-size:10.5px;padding:3px 8px;border-radius:5px;cursor:pointer;
+}
+.reset-btn:hover{color:var(--text);border-color:var(--accent-dim);}
+.CodeMirror{flex:1;height:100% !important;font-family:var(--mono) !important;font-size:13px;background:#1e2039 !important;}
+
+/* ---------- Preview column ---------- */
+.preview-col{display:flex;flex-direction:column;min-height:0;}
+.preview-wrap{
+  flex:0 0 auto;height:44%;display:flex;justify-content:center;align-items:stretch;
+  background:var(--surface);padding:14px;border-bottom:1px solid var(--border);
+}
+.preview-frame-shell{
+  background:#fff;border-radius:10px;overflow:hidden;
+  box-shadow:0 0 0 1px var(--border), 0 12px 30px -12px rgba(0,0,0,.6);
+  transition:width .15s ease;max-width:100%;
+}
+iframe{width:100%;height:100%;border:none;display:block;background:#fff;}
+
+.info-scroll{flex:1;min-height:0;overflow-y:auto;padding:20px 24px 30px;}
+.eyebrow{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:1px;margin-bottom:6px;}
+.info-scroll h2{font-family:var(--display);font-size:22px;margin:0 0 10px;}
+.info-scroll p.lead{color:var(--text-muted);line-height:1.65;margin:0 0 16px;font-size:14px;}
+.tips{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:10px;}
+.tips li{position:relative;padding-left:18px;font-size:13.5px;line-height:1.6;color:var(--text);}
+.tips li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--accent-dim);}
+.tips li code{font-family:var(--mono);background:var(--surface-2);padding:1px 6px;border-radius:4px;color:var(--accent-warm);font-size:12.5px;}
+.challenge{
+  border:1px dashed var(--accent-warm);background:rgba(255,184,107,.08);border-radius:10px;
+  padding:12px 14px;font-size:13px;line-height:1.6;color:var(--text);
+}
+.challenge b{color:var(--accent-warm);font-family:var(--display);font-size:12.5px;letter-spacing:.4px;}
+
+/* ---------- Box model visualizer (CSS mode) ---------- */
+#box-vis-wrap{margin-top:6px;}
+#box-vis-wrap h3, #tree-wrap h3{
+  font-family:var(--display);font-size:13px;color:var(--text-muted);
+  letter-spacing:.4px;margin:0 0 10px;font-weight:500;
+}
+.vis-margin{border:1px dashed var(--accent-dim);border-radius:6px;display:inline-block;position:relative;}
+.vis-border{border:1px solid var(--accent);border-radius:4px;position:relative;background:rgba(124,158,255,.06);}
+.vis-padding{background:rgba(255,184,107,.12);position:relative;border-radius:2px;}
+.vis-content{
+  background:var(--accent);color:#101127;font-family:var(--mono);font-size:10.5px;
+  display:flex;align-items:center;justify-content:center;text-align:center;border-radius:2px;
+  min-width:30px;min-height:20px;line-height:1.3;
+}
+.vis-tag{position:absolute;top:-9px;left:6px;font-family:var(--mono);font-size:9.5px;background:var(--bg);padding:0 5px;color:var(--text-muted);}
+.vis-tag-margin{color:var(--accent-dim);}
+.vis-tag-border{color:var(--accent);}
+.vis-tag-padding{color:var(--accent-warm);}
+.vis-empty{color:var(--text-muted);font-size:12.5px;font-family:var(--mono);}
+
+/* ---------- DOM tree visualizer (HTML mode) ---------- */
+#tree-wrap{margin-top:18px;}
+.tree-node{font-family:var(--mono);font-size:12.5px;margin:3px 0;}
+.tree-tag{color:var(--accent);}
+.tree-attrs{color:var(--accent-warm);margin-left:2px;}
+.tree-children{margin-left:14px;padding-left:10px;border-left:1px dashed var(--border);margin-top:3px;}
+
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="cascade-mark"><span></span><span></span><span></span></div>
+    <div class="brand"><b>網頁開發工作台</b><small>先搭骨架，再談外觀</small></div>
+    <div class="mode-switch">
+      <button id="mode-html-btn">HTML</button>
+      <button id="mode-css-btn">CSS</button>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="width-control">
+      <span>預覽寬度</span>
+      <input type="range" id="width-slider" min="320" max="900" value="900">
+      <b id="width-label">900px</b>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title" id="sidebar-title">HTML 練習主題</div>
+      <div id="lesson-list"></div>
+    </aside>
+
+    <section class="editor-col">
+      <div class="editor-pane">
+        <div class="pane-label">
+          <span><span class="dot dot-html"></span>HTML</span>
+          <button class="reset-btn" id="reset-html">重置</button>
+        </div>
+        <textarea id="html-editor"></textarea>
+      </div>
+      <div class="editor-pane" id="css-pane">
+        <div class="pane-label">
+          <span><span class="dot dot-css"></span>CSS</span>
+          <button class="reset-btn" id="reset-css">重置</button>
+        </div>
+        <textarea id="css-editor"></textarea>
+      </div>
+    </section>
+
+    <section class="preview-col">
+      <div class="preview-wrap">
+        <div class="preview-frame-shell" id="frame-shell" style="width:900px;">
+          <iframe id="preview" title="即時預覽"></iframe>
+        </div>
+      </div>
+      <div class="info-scroll">
+        <div class="eyebrow" id="lesson-eyebrow"></div>
+        <h2 id="lesson-title"></h2>
+        <p class="lead" id="lesson-intro"></p>
+        <ul class="tips" id="lesson-tips"></ul>
+        <div class="challenge"><b>試試看</b><br><span id="lesson-challenge"></span></div>
+        <div id="tree-wrap"><h3>結構樹（即時解析你的標籤階層）</h3><div id="dom-tree"></div></div>
+        <div id="box-vis-wrap" style="display:none;"><h3>盒模型即時視覺化（讀取 .box 的設定）</h3><div id="box-vis"></div></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+
+<script>
+/* ============ Lesson data ============ */
+const HTML_LESSONS = [
+  {
+    id:"doc-structure", title:"文件結構", full:true,
+    intro:"每個 HTML 檔案都有固定的骨架：doctype 宣告文件類型，html 包住整份文件，head 放給瀏覽器看的資訊，body 放使用者會看到的內容。",
+    tips:[
+      "<code>&lt;!DOCTYPE html&gt;</code> 告訴瀏覽器這是 HTML5 文件，一定要放在第一行",
+      "<code>&lt;head&gt;</code> 裡放 <code>&lt;meta&gt;</code>、<code>&lt;title&gt;</code> 等不會顯示在畫面上的資訊",
+      "<code>&lt;body&gt;</code> 裡才是使用者真正會看到的內容",
+      "<code>lang=\"zh-Hant\"</code> 告訴瀏覽器與螢幕閱讀器這份文件是繁體中文"
+    ],
+    challenge:"把 &lt;title&gt; 的內容換成你自己的網站名稱，看看瀏覽器分頁標題怎麼變。",
+    html:
+`<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>我的網頁</title>
+</head>
+<body>
+  <h1>哈囉，HTML！</h1>
+  <p>這是網頁最基本的骨架。</p>
+</body>
+</html>`
+  },
+  {
+    id:"headings-paragraphs", title:"標題與段落",
+    intro:"h1～h6 是有階層意義的標題，不是用來挑字體大小的工具；段落跟強調語意則交給 p、strong、em。",
+    tips:[
+      "<code>h1</code> 代表整頁最重要的標題，一頁通常只用一次",
+      "<code>h2</code>～<code>h6</code> 依重要性遞減，用來表現內容的層級",
+      "<code>strong</code> 是「語意上重要」，<code>em</code> 是「語氣上強調」，不只是加粗斜體",
+      "<code>br</code> 是換行、<code>hr</code> 是分隔線，跟開新段落 <code>p</code> 意義不同"
+    ],
+    challenge:"在段落中間插入一個 &lt;br&gt;，跟開新的 &lt;p&gt; 比較一下畫面間距的差異。",
+    html:
+`<h1>主標題</h1>
+<h2>次標題</h2>
+<p>這是一段內文，<strong>strong 會加粗且有強調語意</strong>，<em>em 會斜體並帶語氣</em>。</p>
+<hr>
+<p>用 br 可以在同一段落內換行，不用每次都開新段落。</p>`
+  },
+  {
+    id:"lists", title:"清單",
+    intro:"清單分成三種：沒有順序性的用 ul，有順序性的用 ol，一問一答式的資料用 dl。",
+    tips:[
+      "<code>ul</code>（unordered list）搭配 <code>li</code>，項目沒有先後順序",
+      "<code>ol</code>（ordered list）也是搭配 <code>li</code>，但代表有順序、步驟",
+      "<code>dl / dt / dd</code> 適合「名詞：說明」這種定義清單",
+      "<code>li</code> 裡面還可以再放一個 ul/ol，做出巢狀清單"
+    ],
+    challenge:"在其中一個 li 裡面再放一個小的 ul，做出兩層的巢狀清單。",
+    html:
+`<h2>待辦清單</h2>
+<ul>
+  <li>買菜</li>
+  <li>寫作業</li>
+</ul>
+
+<h2>操作步驟</h2>
+<ol>
+  <li>打開電腦</li>
+  <li>開始寫 HTML</li>
+</ol>
+
+<dl>
+  <dt>HTML</dt>
+  <dd>網頁的結構語言</dd>
+</dl>`
+  },
+  {
+    id:"links-images", title:"連結與圖片",
+    intro:"a 標籤負責超連結，img 負責顯示圖片。這兩個是把網頁「連起來」跟「畫面豐富起來」最基本的元素。",
+    tips:[
+      "<code>href</code> 是連結目的地，可以是網址、也可以是 <code>#片段</code> 或相對路徑",
+      "<code>target=\"_blank\"</code> 會在新分頁開啟，通常會搭配 <code>rel=\"noopener\"</code>",
+      "<code>img</code> 是自我封閉標籤，用 <code>src</code> 指定圖片來源",
+      "<code>alt</code> 是圖片的替代文字，圖片載入失敗或螢幕閱讀器都會用到它，非裝飾性圖片一定要寫"
+    ],
+    challenge:"把 img 的 alt 文字改成更詳細的描述，並幫連結加上 rel=\"noopener\"。",
+    html:
+`<a href="https://developer.mozilla.org" target="_blank">前往 MDN 文件</a>
+<br><br>
+<img src="https://picsum.photos/240/140" alt="隨機風景圖">`
+  },
+  {
+    id:"table", title:"表格",
+    intro:"表格用來呈現有列與欄關係的資料，例如成績單、時刻表。不要拿表格來做版面排版，那是 CSS 的工作。",
+    tips:[
+      "<code>table</code> 是整個表格的容器",
+      "<code>tr</code>（table row）是一列",
+      "<code>th</code> 是標題儲存格，<code>td</code> 是一般資料儲存格",
+      "<code>thead / tbody</code> 把標題列跟內容分區，語意更清楚"
+    ],
+    challenge:"再新增一列學生資料，並幫表格加上第三個欄位「班級」。",
+    html:
+`<table>
+  <thead>
+    <tr><th>姓名</th><th>分數</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>小美</td><td>90</td></tr>
+    <tr><td>小明</td><td>85</td></tr>
+  </tbody>
+</table>`
+  },
+  {
+    id:"forms", title:"表單",
+    intro:"表單負責收集使用者輸入，從文字框、下拉選單到勾選框，都是靠 form 裡面的各種輸入元素組成。",
+    tips:[
+      "<code>label</code> 的 <code>for</code> 要對到 <code>input</code> 的 <code>id</code>，點文字也能聚焦到欄位",
+      "<code>input</code> 的 <code>type</code> 決定行為，例如 text、email、checkbox、radio",
+      "<code>select + option</code> 組成下拉選單",
+      "<code>button type=\"submit\"</code> 會觸發表單送出"
+    ],
+    challenge:"把 email 欄位加進表單，type 用 email，並且也幫它加上對應的 label。",
+    html:
+`<form>
+  <label for="name">姓名</label>
+  <input type="text" id="name" name="name" placeholder="請輸入姓名">
+  <br><br>
+  <label for="food">最愛食物</label>
+  <select id="food" name="food">
+    <option>牛肉麵</option>
+    <option>滷肉飯</option>
+  </select>
+  <br><br>
+  <label><input type="checkbox" name="agree"> 我同意條款</label>
+  <br><br>
+  <button type="submit">送出</button>
+</form>`
+  },
+  {
+    id:"semantic", title:"語意化標籤",
+    intro:"header、nav、main、article 這些標籤看起來效果跟 div 差不多，但它們帶有意義，能幫助瀏覽器、搜尋引擎、螢幕閱讀器更懂頁面結構。",
+    tips:[
+      "<code>header</code> 通常放頁首、標題或 Logo",
+      "<code>nav</code> 放導覽連結，<code>main</code> 放頁面主要內容，一頁只會有一個 main",
+      "<code>article</code> 是可獨立存在的一段內容，<code>aside</code> 是側邊補充資訊",
+      "<code>footer</code> 放頁尾資訊，這些標籤都不只是「div 的替代品」"
+    ],
+    challenge:"在 main 裡再加一篇 article，看結構樹右邊的階層怎麼跟著多一層。",
+    html:
+`<header><h1>我的網站</h1></header>
+<nav><a href="#">首頁</a> | <a href="#">關於</a></nav>
+<main>
+  <article>
+    <h2>文章標題</h2>
+    <p>這是文章內容...</p>
+  </article>
+  <aside>側邊補充資訊</aside>
+</main>
+<footer>版權所有 © 2026</footer>`
+  },
+  {
+    id:"attributes", title:"屬性與 data-*",
+    intro:"標籤本身只是骨架，屬性才是補充細節的地方：id、class、title 這些是常見屬性，data-* 則可以自訂資料給 JavaScript 使用。",
+    tips:[
+      "<code>id</code> 在整份文件裡必須唯一，通常給 CSS/JS 精準定位用",
+      "<code>class</code> 可以重複套用在多個元素上，是最常用的樣式掛勾",
+      "<code>title</code> 滑鼠停留時會顯示提示文字",
+      "<code>data-*</code> 是自訂屬性，例如 <code>data-user-level</code>，可以在 JavaScript 裡讀取"
+    ],
+    challenge:"幫這段文字再加一個 data-* 屬性，例如 data-id=\"001\"，看結構樹會不會顯示它。",
+    html:
+`<p id="intro" class="highlight" title="滑鼠移過來看看" data-user-level="beginner">
+  這段文字有好幾個屬性，把滑鼠停在上面試試。
+</p>`
+  },
+  {
+    id:"media", title:"多媒體嵌入",
+    intro:"HTML 也能直接嵌入影片、音訊，或用 iframe 嵌入其他頁面內容，不一定每次都要靠外部套件。",
+    tips:[
+      "<code>video</code> 的 <code>controls</code> 屬性會顯示播放器控制列",
+      "<code>source</code> 可以放多個不同格式，瀏覽器會選第一個支援的",
+      "<code>width</code> 可以直接控制播放器寬度",
+      "<code>iframe</code> 可以嵌入整個外部網頁，例如地圖或影片平台"
+    ],
+    challenge:"把 video 拿掉 controls 屬性，看看少了控制列會發生什麼事。",
+    html:
+`<video controls width="280">
+  <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+</video>`
+  },
+  {
+    id:"accessibility", title:"無障礙基礎",
+    intro:"寫對的標籤、補齊該有的屬性，就是無障礙設計最基本也最重要的一步，讓螢幕閱讀器使用者也能順利理解頁面。",
+    tips:[
+      "<code>alt</code> 要描述圖片實際內容，裝飾性圖片才留空 <code>alt=\"\"</code>",
+      "<code>aria-label</code> 可以給只有圖示、沒有文字的按鈕一個可讀的名稱",
+      "<code>label</code> 搭配 <code>for</code> 讓輸入欄位有正確的名稱，點擊範圍也會變大",
+      "語意化標籤（header/nav/main...）本身就是很重要的無障礙基礎"
+    ],
+    challenge:"把 aria-label 的內容換成更具體的說明，例如「關閉搜尋視窗」。",
+    html:
+`<img src="https://picsum.photos/200/120" alt="海邊日落的照片">
+<br><br>
+<button aria-label="關閉視窗">✕</button>
+<br><br>
+<label for="email2">電子郵件</label>
+<input type="email" id="email2" name="email2">`
+  }
+];
+
+const CSS_LESSONS = [
+  {
+    id:"selectors", title:"選擇器基礎",
+    intro:"選擇器決定「這條規則要套用在哪裡」。從最基本的元素、class、id，到會依狀態變化的偽類，是寫 CSS 的第一步。",
+    tips:[
+      "元素選擇器 <code>p</code> 會套用到所有該標籤",
+      "class 用 <code>.btn</code>、id 用 <code>#id</code>，class 可重複使用、id 只能用一次",
+      "後代選擇器 <code>.card p</code> 只選 .card 裡面的 p",
+      "偽類 <code>:hover</code>、<code>:first-child</code> 會依狀態或位置套用樣式"
+    ],
+    challenge:"把第二個 &lt;p&gt; 換個顏色，只用 :nth-child(2) 選出它，不要加 class。",
+    html:
+`<div class="card">
+  <h2 class="title">選擇器練習</h2>
+  <p class="lead">這是第一段文字</p>
+  <p>這是第二段文字</p>
+  <button class="btn">一般按鈕</button>
+  <button class="btn special">特別按鈕</button>
+</div>`,
+    css:
+`.card {
+  padding: 24px;
+  font-family: sans-serif;
+}
+.title {
+  color: #4a5dc7;
+}
+p {
+  color: #555;
+}
+.lead {
+  font-weight: 700;
+}
+.btn {
+  padding: 8px 16px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #ddd;
+  cursor: pointer;
+}
+.btn:hover {
+  background: #bbb;
+}
+.special {
+  background: #ffb86b;
+}`
+  },
+  {
+    id:"box-model", title:"盒模型 Box Model",
+    intro:"每個元素都是一個盒子，由內而外是 content、padding、border、margin。理解這四層，版面的間距問題就解了一半。",
+    tips:[
+      "<code>padding</code> 是內容和邊框之間的空間，會撐大盒子",
+      "<code>border</code> 是邊框本身的粗細",
+      "<code>margin</code> 是盒子跟外面其他元素的距離，不會有背景色",
+      "加上 <code>box-sizing: border-box</code> 可以讓 width/height 包含 padding 和 border，比較好算"
+    ],
+    challenge:"把 padding 改成 40px，觀察右邊的圖解怎麼跟著長大；再試著加一行 box-sizing: border-box。",
+    html:`<div class="box">盒子</div>`,
+    css:
+`.box {
+  width: 160px;
+  height: 80px;
+  padding: 20px;
+  border: 4px solid #4a5dc7;
+  margin: 30px;
+  background: #eef1ff;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+}`
+  },
+  {
+    id:"flexbox", title:"Flexbox 排版",
+    intro:"Flexbox 是一維排版工具，很適合處理「一排」或「一欄」的對齊與分配空間，是最常用的排版方式之一。",
+    tips:[
+      "父層加 <code>display: flex</code>，子項目就會排成一列",
+      "<code>justify-content</code> 控制主軸（通常是水平）的對齊",
+      "<code>align-items</code> 控制交叉軸（通常是垂直）的對齊",
+      "<code>gap</code> 用來控制項目之間的間距，不用再靠 margin 硬湊"
+    ],
+    challenge:"把 justify-content 改成 space-between，再改成 flex-end，感受差異。",
+    html:
+`<div class="flex-row">
+  <div class="item">1</div>
+  <div class="item">2</div>
+  <div class="item">3</div>
+</div>`,
+    css:
+`.flex-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  height: 160px;
+  background: #f4f5fb;
+}
+.item {
+  width: 60px;
+  height: 60px;
+  background: #4a5dc7;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 700;
+  font-family: sans-serif;
+}`
+  },
+  {
+    id:"grid", title:"Grid 網格系統",
+    intro:"Grid 是二維排版工具，可以同時控制列跟欄，很適合做整體版面骨架，例如卡片牆或頁面框架。",
+    tips:[
+      "<code>grid-template-columns: repeat(3, 1fr)</code> 建立三個等寬欄位",
+      "<code>gap</code> 一樣可以控制格子間距",
+      "<code>grid-column: span 2</code> 可以讓某一格橫跨兩欄",
+      "Grid 適合整體骨架，Flexbox 適合單一排列，兩者常常搭配使用"
+    ],
+    challenge:"讓其中一個 .cell 加上 grid-column: span 2，看它怎麼撐大。",
+    html:
+`<div class="grid">
+  <div class="cell">A</div>
+  <div class="cell">B</div>
+  <div class="cell">C</div>
+  <div class="cell">D</div>
+  <div class="cell">E</div>
+  <div class="cell">F</div>
+</div>`,
+    css:
+`.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  font-family: sans-serif;
+}
+.cell {
+  background: #eef1ff;
+  color: #333;
+  padding: 20px;
+  text-align: center;
+  border-radius: 6px;
+  font-weight: 600;
+}`
+  },
+  {
+    id:"position", title:"定位 Position",
+    intro:"position 決定元素怎麼脫離或留在原本的文件流裡。static、relative、absolute、fixed 各自的行為不太一樣，很多人一開始會搞混。",
+    tips:[
+      "<code>static</code> 是預設值，不吃 top/left 這些偏移屬性",
+      "<code>relative</code> 會相對「自己原本的位置」偏移，且不影響其他元素",
+      "<code>absolute</code> 會相對「最近的 relative/absolute 祖先」定位，需要小心跟 relative 搭配",
+      "<code>fixed</code> 相對瀏覽器視窗，滾動頁面也不會動"
+    ],
+    challenge:"把 .absolute 的 bottom/right 改成 top/left，看它跳去哪個角落。",
+    html:
+`<div class="stage">
+  <div class="box relative">relative</div>
+  <div class="box absolute">absolute</div>
+  <div class="box static">static</div>
+</div>`,
+    css:
+`.stage {
+  position: relative;
+  height: 220px;
+  border: 2px dashed #4a5dc7;
+  font-family: sans-serif;
+}
+.box {
+  padding: 10px;
+  color: #fff;
+  border-radius: 6px;
+  width: 100px;
+  text-align: center;
+  font-size: 13px;
+}
+.relative {
+  position: relative;
+  top: 10px;
+  left: 10px;
+  background: #4a5dc7;
+}
+.absolute {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: #d98a3e;
+}
+.static {
+  background: #888;
+}`
+  },
+  {
+    id:"color-gradient", title:"色彩與漸層",
+    intro:"CSS 的顏色不只是單色填色，rgba、漸層都能讓畫面更有層次，是視覺設計中很常用的技巧。",
+    tips:[
+      "顏色可以用 <code>#hex</code>、<code>rgb()</code>、<code>rgba()</code> 表示，rgba 多一個透明度",
+      "<code>linear-gradient(角度, 顏色1, 顏色2)</code> 建立線性漸層",
+      "角度 <code>135deg</code> 代表從左上到右下漸變",
+      "也可以用 <code>radial-gradient()</code> 做出放射狀的漸層"
+    ],
+    challenge:"把角度從 135deg 改成 90deg，再加第三種顏色進漸層裡。",
+    html:`<div class="panel"></div>`,
+    css:
+`.panel {
+  height: 180px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4a5dc7, #ffb86b);
+}`
+  },
+  {
+    id:"typography", title:"文字排版",
+    intro:"字型、行高、字距這些細節，決定一段文字讀起來舒不舒服，是很容易被忽略但影響很大的地方。",
+    tips:[
+      "<code>line-height</code> 建議設 1.4～1.8 之間，太擠或太鬆都不好讀",
+      "<code>letter-spacing</code> 微調字距，標題常用來拉開一點",
+      "<code>font-weight</code> 控制粗細，不是所有字型都有每個粗細",
+      "中文排版建議搭配 <code>font-family</code> 提供多個備援字型"
+    ],
+    challenge:"把 line-height 改成 1，感受一下閱讀起來的差別，再改回 1.7。",
+    html:
+`<article class="post">
+  <h1>標題文字示範</h1>
+  <p>這是一段內文，用來示範字距、行高與字重帶來的閱讀感受差異，試著調整下面的數值看看效果。</p>
+</article>`,
+    css:
+`.post {
+  font-family: sans-serif;
+  max-width: 420px;
+}
+.post h1 {
+  font-size: 24px;
+  letter-spacing: 0.5px;
+  color: #2b2d5c;
+  margin-bottom: 10px;
+}
+.post p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #555;
+}`
+  },
+  {
+    id:"transition", title:"轉場與動畫",
+    intro:"transition 讓狀態改變時有過渡效果，animation 則可以做出重複或更複雜的動作，兩者是網頁「動起來」的關鍵。",
+    tips:[
+      "<code>transition: all .2s ease</code> 讓 hover 等狀態變化變得滑順",
+      "<code>transform: scale()</code> / <code>translateY()</code> 常搭配 transition 做互動效果",
+      "<code>@keyframes</code> 可以定義多個階段的動畫",
+      "<code>animation</code> 屬性把 keyframes 套用到元素上，可設定次數、速度曲線"
+    ],
+    challenge:"把 transition 時間從 .2s 改成 .8s，感受過渡速度的差別。",
+    html:`<button class="pulse-btn">Hover 我看看</button>`,
+    css:
+`.pulse-btn {
+  padding: 12px 22px;
+  border: none;
+  border-radius: 8px;
+  background: #4a5dc7;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform .2s ease, background .2s ease;
+}
+.pulse-btn:hover {
+  transform: scale(1.08);
+  background: #3a4aa8;
+}`
+  },
+  {
+    id:"media-queries", title:"響應式設計",
+    intro:"media query 讓樣式依照畫面寬度改變，是做響應式網頁的基礎。用上面的「預覽寬度」滑桿拖動，就能看到斷點切換的瞬間。",
+    tips:[
+      "<code>@media (max-width: 600px) { ... }</code> 代表寬度小於等於 600px 時套用",
+      "通常先寫「手機優先」的基礎樣式，再用 media query 加寬螢幕的調整",
+      "斷點不需要硬背數字，依內容實際需要調整即可",
+      "拖動上方的預覽寬度滑桿，觀察下面色塊在跨過 600px 時的變化"
+    ],
+    challenge:"把斷點從 600px 改成 500px，再拖滑桿驗證切換的位置有沒有跟著改變。",
+    html:`<div class="box">目前是寬螢幕樣式</div>`,
+    css:
+`.box {
+  padding: 40px;
+  text-align: center;
+  color: #fff;
+  background: #4a5dc7;
+  border-radius: 10px;
+  font-family: sans-serif;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .box {
+    background: #d98a3e;
+  }
+}`
+  },
+  {
+    id:"custom-properties", title:"CSS 變數",
+    intro:"CSS 變數（Custom Properties）可以把重複使用的值抽出來統一管理，換主題色或間距時只要改一個地方。",
+    tips:[
+      "在 <code>:root</code> 裡定義變數，例如 <code>--main: #4a5dc7;</code>",
+      "用 <code>var(--main)</code> 在任何屬性裡取用這個變數",
+      "跟 Sass 變數不同，CSS 變數是「活的」，可以被 JS 或 media query 動態改變",
+      "適合用來管理主題色、間距單位、圓角大小等重複出現的數值"
+    ],
+    challenge:"改 --main 的顏色值，觀察下面色塊怎麼跟著換色。",
+    html:`<div class="theme-box"><p>可自訂主題色</p></div>`,
+    css:
+`:root {
+  --main: #4a5dc7;
+  --radius: 12px;
+}
+.theme-box {
+  background: var(--main);
+  border-radius: var(--radius);
+  padding: 28px;
+  color: #fff;
+  font-family: sans-serif;
+  font-weight: 700;
+  text-align: center;
+}`
+  }
+];
+
+/* ============ State ============ */
+let mode = 'html';
+let currentHtml = HTML_LESSONS[0];
+let currentCss = CSS_LESSONS[0];
+let htmlEditor, cssEditor, previewTimer;
+
+const baseStyle = `
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;margin:0;padding:24px;color:#222;line-height:1.6;}
+  table{border-collapse:collapse;margin-top:8px;}
+  th,td{border:1px solid #ccc;padding:6px 12px;text-align:left;}
+  input,select,button,textarea{font-size:14px;padding:6px 8px;}
+  a{color:#4a5dc7;}
+`;
+
+function initEditors(){
+  htmlEditor = CodeMirror.fromTextArea(document.getElementById('html-editor'), {
+    mode:'htmlmixed', theme:'dracula', lineNumbers:true, tabSize:2, viewportMargin:Infinity
+  });
+  cssEditor = CodeMirror.fromTextArea(document.getElementById('css-editor'), {
+    mode:'css', theme:'dracula', lineNumbers:true, tabSize:2, viewportMargin:Infinity
+  });
+  htmlEditor.on('change', scheduleUpdate);
+  cssEditor.on('change', scheduleUpdate);
+}
+
+function scheduleUpdate(){
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(()=>{
+    updatePreview();
+    updateVisualizer();
+  }, 220);
+}
+
+function updatePreview(){
+  let doc;
+  if(mode === 'html'){
+    const src = htmlEditor.getValue();
+    doc = currentHtml.full ? src : `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${baseStyle}</style></head><body>${src}</body></html>`;
+  } else {
+    doc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${baseStyle}${cssEditor.getValue()}</style></head><body>${htmlEditor.getValue()}</body></html>`;
+  }
+  document.getElementById('preview').srcdoc = doc;
+}
+
+function renderTreeNode(el){
+  let attrs = '';
+  if(el.id) attrs += `#${el.id}`;
+  if(el.className && typeof el.className === 'string' && el.className.trim()){
+    attrs += '.' + el.className.trim().split(/\s+/).join('.');
+  }
+  const children = Array.from(el.children);
+  let inner = `<span class="tree-tag">&lt;${el.tagName.toLowerCase()}</span><span class="tree-attrs">${attrs}</span><span class="tree-tag">&gt;</span>`;
+  if(children.length){
+    return `<div class="tree-node">${inner}<div class="tree-children">${children.map(renderTreeNode).join('')}</div></div>`;
+  }
+  return `<div class="tree-node">${inner}</div>`;
+}
+
+function updateVisualizer(){
+  const treeWrap = document.getElementById('tree-wrap');
+  const boxWrap = document.getElementById('box-vis-wrap');
+
+  if(mode === 'html'){
+    boxWrap.style.display = 'none';
+    treeWrap.style.display = 'block';
+    const src = htmlEditor.getValue();
+    const parsed = new DOMParser().parseFromString(src, 'text/html');
+    const root = currentHtml.full ? parsed.documentElement : parsed.body;
+    const container = document.getElementById('dom-tree');
+    if(!root || !root.children.length){
+      container.innerHTML = '<p class="vis-empty">目前沒有可解析的元素</p>';
+    } else {
+      container.innerHTML = Array.from(root.children).map(renderTreeNode).join('');
+    }
+  } else {
+    treeWrap.style.display = 'none';
+    if(currentCss.id === 'box-model'){
+      boxWrap.style.display = 'block';
+      updateBoxVis();
+    } else {
+      boxWrap.style.display = 'none';
+    }
+  }
+}
+
+function updateBoxVis(){
+  const css = cssEditor.getValue();
+  const match = css.match(/\.box\s*{([^}]*)}/);
+  const vis = document.getElementById('box-vis');
+  if(!match){
+    vis.innerHTML = '<p class="vis-empty">找不到 .box 規則，先在 CSS 裡加一個 .box 試試</p>';
+    return;
+  }
+  const block = match[1];
+  const get = (re, def) => { const m = block.match(re); return m ? parseFloat(m[1]) : def; };
+  const width   = get(/width:\s*([\d.]+)px/, 100);
+  const height  = get(/height:\s*([\d.]+)px/, 60);
+  const padding = get(/padding:\s*([\d.]+)px/, 0);
+  const border  = get(/border(?:-width)?:\s*([\d.]+)px/, 0);
+  const margin  = get(/margin:\s*([\d.]+)px/, 0);
+
+  const mClamp = Math.min(margin, 40);
+  const bClamp = Math.min(border, 16);
+  const pClamp = Math.min(padding, 40);
+  const wClamp = Math.min(width, 200);
+  const hClamp = Math.min(height, 110);
+
+  vis.innerHTML = `
+    <div class="vis-margin" style="padding:${mClamp}px">
+      <span class="vis-tag vis-tag-margin">margin ${margin}px</span>
+      <div class="vis-border" style="padding:${bClamp}px">
+        <span class="vis-tag vis-tag-border">border ${border}px</span>
+        <div class="vis-padding" style="padding:${pClamp}px">
+          <span class="vis-tag vis-tag-padding">padding ${padding}px</span>
+          <div class="vis-content" style="width:${wClamp}px;height:${hClamp}px">content<br>${width}×${height}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSidebar(){
+  const list = document.getElementById('lesson-list');
+  const lessons = mode === 'html' ? HTML_LESSONS : CSS_LESSONS;
+  const activeId = (mode === 'html' ? currentHtml : currentCss).id;
+  document.getElementById('sidebar-title').textContent = mode === 'html' ? 'HTML 練習主題' : 'CSS 練習主題';
+  list.innerHTML = '';
+  lessons.forEach((l, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'lesson-btn' + (l.id === activeId ? ' active' : '');
+    btn.innerHTML = `<span class="num">${String(i+1).padStart(2,'0')}</span>${l.title}`;
+    btn.onclick = ()=> loadLesson(l.id);
+    btn.dataset.id = l.id;
+    list.appendChild(btn);
+  });
+}
+
+function loadLesson(id){
+  const lessons = mode === 'html' ? HTML_LESSONS : CSS_LESSONS;
+  const lesson = lessons.find(l => l.id === id);
+  if(mode === 'html'){
+    currentHtml = lesson;
+    htmlEditor.setValue(lesson.html);
+  } else {
+    currentCss = lesson;
+    htmlEditor.setValue(lesson.html);
+    cssEditor.setValue(lesson.css);
+  }
+  refreshInfoPanel(lesson);
+  renderSidebar();
+  updatePreview();
+  updateVisualizer();
+}
+
+function refreshInfoPanel(lesson){
+  const lessons = mode === 'html' ? HTML_LESSONS : CSS_LESSONS;
+  document.getElementById('lesson-eyebrow').textContent = `${mode === 'html' ? 'HTML' : 'CSS'} 主題 ${lessons.indexOf(lesson)+1} / ${lessons.length}`;
+  document.getElementById('lesson-title').textContent = lesson.title;
+  document.getElementById('lesson-intro').textContent = lesson.intro;
+  document.getElementById('lesson-tips').innerHTML = lesson.tips.map(t=>`<li>${t}</li>`).join('');
+  document.getElementById('lesson-challenge').innerHTML = lesson.challenge;
+}
+
+function switchMode(newMode){
+  if(mode === newMode) return;
+  mode = newMode;
+  document.getElementById('mode-html-btn').classList.toggle('active', mode==='html');
+  document.getElementById('mode-css-btn').classList.toggle('active', mode==='css');
+  document.getElementById('css-pane').style.display = mode === 'css' ? 'flex' : 'none';
+
+  const lesson = mode === 'html' ? currentHtml : currentCss;
+  htmlEditor.setValue(lesson.html);
+  if(mode === 'css') cssEditor.setValue(currentCss.css);
+
+  refreshInfoPanel(lesson);
+  renderSidebar();
+  updatePreview();
+  updateVisualizer();
+}
+
+document.getElementById('mode-html-btn').onclick = ()=> switchMode('html');
+document.getElementById('mode-css-btn').onclick = ()=> switchMode('css');
+
+document.getElementById('reset-html').onclick = ()=>{
+  const lesson = mode === 'html' ? currentHtml : currentCss;
+  htmlEditor.setValue(lesson.html);
+  scheduleUpdate();
+};
+document.getElementById('reset-css').onclick = ()=>{
+  cssEditor.setValue(currentCss.css);
+  scheduleUpdate();
+};
+
+const slider = document.getElementById('width-slider');
+const shell = document.getElementById('frame-shell');
+const widthLabel = document.getElementById('width-label');
+slider.addEventListener('input', ()=>{
+  shell.style.width = slider.value + 'px';
+  widthLabel.textContent = slider.value + 'px';
+});
+
+/* ============ Init ============ */
+initEditors();
+document.getElementById('css-pane').style.display = 'none';
+document.getElementById('mode-html-btn').classList.add('active');
+htmlEditor.setValue(currentHtml.html);
+cssEditor.setValue(currentCss.css);
+refreshInfoPanel(currentHtml);
+renderSidebar();
+updatePreview();
+updateVisualizer();
+</script>
+</body>
+</html>
